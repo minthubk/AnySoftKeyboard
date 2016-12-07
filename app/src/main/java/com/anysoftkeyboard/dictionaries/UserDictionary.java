@@ -20,11 +20,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.anysoftkeyboard.base.dictionaries.EditableDictionary;
+import com.anysoftkeyboard.base.dictionaries.LoadedWord;
 import com.anysoftkeyboard.base.dictionaries.WordComposer;
-import com.anysoftkeyboard.base.dictionaries.WordsCursor;
 import com.anysoftkeyboard.dictionaries.content.AndroidUserDictionary;
 import com.anysoftkeyboard.dictionaries.sqlite.FallbackUserDictionary;
 import com.anysoftkeyboard.nextword.NextWordDictionary;
@@ -34,6 +35,7 @@ import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.R;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class UserDictionary extends EditableDictionary {
@@ -149,12 +151,13 @@ public class UserDictionary extends EditableDictionary {
         }
     }
 
+    @NonNull
     @Override
-    public final WordsCursor getWordsCursor() {
+    public List<LoadedWord> loadWords() {
         if (mActualDictionary != null)
-            return mActualDictionary.getWordsCursor();
+            return mActualDictionary.loadWords();
 
-        return null;
+        return Collections.emptyList();
     }
 
     @Override

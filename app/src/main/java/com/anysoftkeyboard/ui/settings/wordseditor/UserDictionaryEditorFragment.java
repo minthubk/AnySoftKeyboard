@@ -23,7 +23,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.database.Cursor;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
@@ -48,7 +47,7 @@ import android.widget.Spinner;
 
 import com.anysoftkeyboard.PermissionsRequestCodes;
 import com.anysoftkeyboard.base.dictionaries.EditableDictionary;
-import com.anysoftkeyboard.base.dictionaries.WordsCursor;
+import com.anysoftkeyboard.base.dictionaries.LoadedWord;
 import com.anysoftkeyboard.dictionaries.UserDictionary;
 import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
 import com.anysoftkeyboard.keyboards.KeyboardFactory;
@@ -83,15 +82,14 @@ public class UserDictionaryEditorFragment extends Fragment
 
     private Spinner mLanguagesSpinner;
 
-    private WordsCursor mCursor;
     private String mSelectedLocale = null;
     private EditableDictionary mCurrentDictionary;
 
     private RecyclerView mWordsRecyclerView;
 
-    private static final Comparator<EditorWord> msWordsComparator = new Comparator<EditorWord>() {
+    private static final Comparator<LoadedWord> msWordsComparator = new Comparator<LoadedWord>() {
         @Override
-        public int compare(EditorWord lhs, EditorWord rhs) {
+        public int compare(LoadedWord lhs, LoadedWord rhs) {
             return lhs.word.compareTo(rhs.word);
         }
     };
@@ -198,12 +196,9 @@ public class UserDictionaryEditorFragment extends Fragment
         mDialog = null;
 
         super.onDestroy();
-        if (mCursor != null)
-            mCursor.close();
         if (mCurrentDictionary != null)
             mCurrentDictionary.close();
 
-        mCursor = null;
         mCurrentDictionary = null;
     }
 
@@ -291,7 +286,7 @@ public class UserDictionaryEditorFragment extends Fragment
         Logger.d(TAG, "Selected locale is " + mSelectedLocale);
         new UserWordsEditorAsyncTask(this, true) {
             private EditableDictionary mNewDictionary;
-            private List<EditorWord> mWordsList;
+            private List<LoadedWord> mWordsList;
 
             @Override
             protected void onPreExecute() {
@@ -299,8 +294,7 @@ public class UserDictionaryEditorFragment extends Fragment
                 // all the code below can be safely (and must) be called in the
                 // UI thread.
                 mNewDictionary = getEditableDictionary(mSelectedLocale);
-                if (mNewDictionary != mCurrentDictionary
-                        && mCurrentDictionary != null && mCursor != null) {
+                if (mNewDictionary != mCurrentDictionary && mCurrentDictionary != null) {
                     mCurrentDictionary.close();
                 }
             }
@@ -309,17 +303,7 @@ public class UserDictionaryEditorFragment extends Fragment
             protected Void doAsyncTask(Void[] params) throws Exception {
                 mCurrentDictionary = mNewDictionary;
                 mCurrentDictionary.loadDictionary();
-                mCursor = mCurrentDictionary.getWordsCursor();
-                Cursor cursor = mCursor.getCursor();
-                mWordsList = new ArrayList<>(mCursor.getCursor().getCount());
-                cursor.moveToFirst();
-                while (!cursor.isAfterLast()) {
-                    EditorWord word = new EditorWord(
-                            mCursor.getCurrentWord(),
-                            mCursor.getCurrentWordFrequency());
-                    mWordsList.add(word);
-                    cursor.moveToNext();
-                }
+                mWordsList = mCurrentDictionary.loadWords();
                 //now, sorting the word list alphabetically
                 Collections.sort(mWordsList, msWordsComparator);
                 return null;
@@ -334,7 +318,7 @@ public class UserDictionaryEditorFragment extends Fragment
         }.execute();
     }
 
-    protected EditorWordsAdapter createAdapterForWords(List<EditorWord> wordsList) {
+    protected EditorWordsAdapter createAdapterForWords(List<LoadedWord> wordsList) {
         Activity activity = getActivity();
         if (activity == null) return null;
         return new EditorWordsAdapter(wordsList, LayoutInflater.from(activity), this);
@@ -354,7 +338,7 @@ public class UserDictionaryEditorFragment extends Fragment
     }
 
     @Override
-    public void onWordDeleted(final EditorWord word) {
+    public void onWordDeleted(final LoadedWord word) {
         new UserWordsEditorAsyncTask(this, false) {
             @Override
             protected Void doAsyncTask(Void[] params) throws Exception {
@@ -373,7 +357,7 @@ public class UserDictionaryEditorFragment extends Fragment
     }
 
     @Override
-    public void onWordUpdated(final String oldWord, final EditorWord newWord) {
+    public void onWordUpdated(final String oldWord, final LoadedWord newWord) {
 
         new UserWordsEditorAsyncTask(this, false) {
             @Override
@@ -381,7 +365,7 @@ public class UserDictionaryEditorFragment extends Fragment
                 if (!TextUtils.isEmpty(oldWord))//it can be empty in case it's a new word.
                     deleteWord(oldWord);
                 deleteWord(newWord.word);
-                mCurrentDictionary.addWord(newWord.word, newWord.frequency);
+                mCurrentDictionary.addWord(newWord.word, newWord.freq);
                 return null;
             }
 

@@ -17,13 +17,11 @@
 package com.anysoftkeyboard.ui.settings.wordseditor;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.os.Environment;
-import android.provider.UserDictionary.Words;
 import android.text.TextUtils;
 import android.widget.Toast;
 
-import com.anysoftkeyboard.base.dictionaries.WordsCursor;
+import com.anysoftkeyboard.base.dictionaries.LoadedWord;
 import com.anysoftkeyboard.dictionaries.UserDictionary;
 import com.anysoftkeyboard.utils.Logger;
 import com.anysoftkeyboard.utils.XmlWriter;
@@ -31,6 +29,7 @@ import com.menny.android.anysoftkeyboard.R;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 final class BackupUserWordsAsyncTask extends UserWordsEditorAsyncTask {
     private static final String TAG = "ASK BackupUDict";
@@ -78,26 +77,17 @@ final class BackupUserWordsAsyncTask extends UserWordsEditorAsyncTask {
             UserDictionary dictionary = new UserDictionary(mAppContext, locale);
             dictionary.loadDictionary();
             Logger.d(TAG, "Reading words from user dictionary locale " + locale);
-            WordsCursor wordsCursor = dictionary.getWordsCursor();
 
             output.writeEntity("wordlist").writeAttribute("locale", locale);
-            Cursor cursor = wordsCursor.getCursor();
-            cursor.moveToFirst();
-            final int wordIndex = cursor.getColumnIndex(Words.WORD);
-            final int freqIndex = cursor.getColumnIndex(Words.FREQUENCY);
+            List<LoadedWord> words = dictionary.loadWords();
 
-            while (!cursor.isAfterLast()) {
-                String word = cursor.getString(wordIndex).trim();
-                int freq = cursor.getInt(freqIndex);
+            for (LoadedWord word : words) {
                 // <w f="128">Facebook</w>
                 output.writeEntity("w")
-                        .writeAttribute("f", Integer.toString(freq))
-                        .writeText(word).endEntity();
-                Logger.d(TAG, "Storing word '" + word + "' with freq " + freq);
-                cursor.moveToNext();
+                        .writeAttribute("f", Integer.toString(word.freq))
+                        .writeText(word.word).endEntity();
             }
 
-            wordsCursor.close();
             dictionary.close();
 
             output.endEntity();// wordlist

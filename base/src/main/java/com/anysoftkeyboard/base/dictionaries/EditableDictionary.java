@@ -17,6 +17,10 @@
 package com.anysoftkeyboard.base.dictionaries;
 
 
+import android.support.annotation.NonNull;
+
+import java.util.List;
+
 public abstract class EditableDictionary extends Dictionary {
 
     protected EditableDictionary(String dictionaryName) {
@@ -33,7 +37,8 @@ public abstract class EditableDictionary extends Dictionary {
      */
     public abstract boolean addWord(String word, int frequency);
 
-    public abstract WordsCursor getWordsCursor();
+    @NonNull
+    public abstract List<LoadedWord> loadWords();
 
     public abstract void deleteWord(String word);
 }
